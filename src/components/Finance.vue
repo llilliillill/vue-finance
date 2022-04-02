@@ -18,15 +18,33 @@
     <tbody>
       <template v-for="(item, i) in array" :key="i">
 
+        <tr v-if="isDay(item.date)">
+          <td class="day" colspan="4">{{ getDate(this.day) }}</td>
+        </tr>
+
         <tr>
           <td>{{ i + 1 }}</td>
 
           <!-- [ РЕДАКТИРУЕМ DATE ] -->
-          <td v-if="editdate == i"><input ref="date" :value="item.date" @blur="editClose" @keypress.enter="saveEditData('date')"></td>
+          <td v-if="editdate == i">
+            <input 
+              ref="date" 
+              :value="item.date" 
+              @blur="editClose" 
+              @keypress.enter="saveEditData('date')"
+            >
+          </td>
           <td v-else @click="editDate(i)">{{ item.date }}</td>
 
           <!-- [ РЕДАКТИРУЕМ NUMBER ] -->
-          <td v-if="editnumber == i"><input ref="number" :value="item.number" @blur="editClose" @keypress.enter="saveEditData('number')"></td>
+          <td v-if="editnumber == i">
+            <input 
+              ref="number" 
+              :value="item.number" 
+              @blur="editClose" 
+              @keypress.enter="saveEditData('number')"
+            >
+          </td>
           <td v-else @click="editNumber(i)" :style="getTextColor(item.number)">{{ item.number }}</td>
 
           <td @click="deleteItem(i)">✕</td>
@@ -55,7 +73,7 @@
         <td v-if="addDateOpen">
           <input 
             ref="date" 
-            :placeholder="date()" 
+            :placeholder="today()" 
             @blur="addEditClose"
             v-model="adddate"
           >
@@ -92,11 +110,12 @@ export default {
     return {
       title: 'Таблица финансов',
       array: json,
-      day: 0,
+      getday: true,
+      day: '',
       editdate: undefined,
       editnumber: undefined,
       add: true,
-      adddate: this.date(),
+      adddate: this.today(),
       addnumber: '0',
       addDateOpen: false,
       addNumberOpen: false
@@ -122,8 +141,19 @@ export default {
     },
 
     /* [ ПОЛУЧИТЬ СЕГОДНЯШНЮЮ ДАТУ ] */ 
-    date(){
+    today(){
       return (new Date()).toLocaleString('ru', {
+        year:  'numeric', 
+        month: 'numeric', 
+        day:   'numeric'
+      })
+    },
+
+    /* [ ПОЛУЧИТЬ ВЧЕРАШНЮЮ ДАТУ ] */ 
+    yesterday(){
+      let today = new Date()
+      today.setDate(today.getDate()-1)
+      return today.toLocaleString('ru', {
         year:  'numeric', 
         month: 'numeric', 
         day:   'numeric'
@@ -137,7 +167,7 @@ export default {
 
     /* [ ФОРМАТИРОВАНИЕ DATE ] */ 
     formatDate(value){
-      return (value ? value : this.date())
+      return (value ? value : this.today())
     },
 
     /* [ ФОРМАТИРОВАНИЕ NUMBER ] */ 
@@ -151,6 +181,26 @@ export default {
       value = String(value)
       return (value.substring(0,1) === '+' ? {color: 'green'} : 
       (value.substring(0,1) === '-' ? {color: 'red'} : {color: 'gray'})) 
+    },
+
+    /* [ ... ] */
+    isDay(value){
+      if(this.day !== value){
+        this.day = value
+        return true
+      }
+      return false
+    },
+
+    /* [ ... ] */
+    getDate(){
+      if(this.day == this.today()){
+        return 'Сегодня'
+      } else if(this.day == this.yesterday()){
+        return 'Вчера'
+      } else {
+        return this.day
+      }
     },
 
     /* [ ... ] */
@@ -171,7 +221,7 @@ export default {
         'date':  this.formatDate(this.adddate),
         'number': this.formatNumber(this.addnumber),
       })
-      this.adddate = this.date()
+      this.adddate = this.today()
       this.addnumber = '0'
       this.add = true
     },
@@ -240,7 +290,7 @@ export default {
 
     /* [ ... ] */
     addClose(){
-      this.adddate = this.date()
+      this.adddate = this.today()
       this.addnumber = '0'
       this.add = true
     }
@@ -303,5 +353,13 @@ export default {
     outline: none;
     box-shadow: inset 0px 0px 3px blue;
     color: blue;
+  }
+
+  /* [ ... ] */
+  .day{
+    height: 23px;
+    font-size: 14px;
+    border: none;
+    background: rgb(238, 238, 238);
   }
 </style>
