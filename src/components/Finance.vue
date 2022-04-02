@@ -18,18 +18,15 @@
     <tbody>
       <template v-for="(item, i) in array" :key="i">
 
-        <!-- [ ДАТА ] -->
-        <!-- <tr><td colspan="4">{{ item.date }}</td></tr> -->
-
         <tr>
           <td>{{ i + 1 }}</td>
 
           <!-- [ РЕДАКТИРУЕМ DATE ] -->
-          <td v-if="editdate == i"><input ref="date" :value="item.date"></td>
+          <td v-if="editdate == i"><input ref="date" :value="item.date" @blur="editClose" @keypress.enter="saveEditData('date')"></td>
           <td v-else @click="editDate(i)">{{ item.date }}</td>
 
           <!-- [ РЕДАКТИРУЕМ NUMBER ] -->
-          <td v-if="editnumber == i"><input ref="number" :value="item.number"></td>
+          <td v-if="editnumber == i"><input ref="number" :value="item.number" @blur="editClose" @keypress.enter="saveEditData('number')"></td>
           <td v-else @click="editNumber(i)" :style="getTextColor(item.number)">{{ item.number }}</td>
 
           <td @click="deleteItem(i)">✕</td>
@@ -49,13 +46,34 @@
 
       <!-- [ ДОБАВИТЬ ЯЧЕЙКУ ] -->
       <tr v-if="add">
-        <td colspan="4" @click="addOpen()">Добавить ячейку</td>
+        <td colspan="4" @click="addOpen">Добавить ячейку</td>
       </tr>
-      <tr v-else>
+      <tr v-else @keypress.enter="saveAddData">
         <td>{{ array.length + 1 }}</td>
-        <td><input ref="date" :placeholder="date()"></td>
-        <td><input ref="number" placeholder="0"></td>
-        <td @click="addClose()">✕</td>
+
+        <!-- [ РЕДАКТИРУЕМ DATE ] -->
+        <td v-if="addDateOpen">
+          <input 
+            ref="date" 
+            :placeholder="date()" 
+            @blur="addEditClose"
+            v-model="adddate"
+          >
+        </td>
+        <td v-else @click="addEditOpen('date')">{{ adddate }}</td>
+
+        <!-- [ РЕДАКТИРУЕМ NUMBER ] -->
+        <td v-if="addNumberOpen">
+          <input 
+            ref="number" 
+            placeholder="0" 
+            @blur="addEditClose"
+            v-model="addnumber"
+          >
+        </td>
+        <td v-else @click="addEditOpen('number')">{{ addnumber }}</td>
+
+        <td @click="addClose">✕</td>
       </tr>
     </tfoot>
    
@@ -77,40 +95,11 @@ export default {
       day: 0,
       editdate: undefined,
       editnumber: undefined,
-      add: true
-    }
-  },
-
-  created() {
-    document.onclick = (e) => {
-      if(e.target.tagName != 'TD' &&
-         e.target.tagName != 'INPUT'){
-        this.add = true
-        this.editdate = undefined
-        this.editnumber = undefined
-      }
-    }
-
-    document.onkeydown = (e) => {
-      if(e.key == 'Enter'){
-        if(this.editdate){
-          this.array[this.editdate].date = this.formatDate(this.$refs.date[0].value)
-          this.editdate = undefined
-        } 
-        if(this.editnumber){
-          this.array[this.editnumber].number = this.formatNumber(this.$refs.number[0].value)
-          this.editnumber = undefined
-        }
-        if(!this.add){
-          this.array.push({
-            'date':  this.formatDate(this.$refs.date.value),
-            'number': this.formatNumber(this.$refs.number.value),
-          })
-          this.$refs.date.value = ''
-          this.$refs.number.value = ''
-          this.add = true
-        }
-      }
+      add: true,
+      adddate: this.date(),
+      addnumber: '0',
+      addDateOpen: false,
+      addNumberOpen: false
     }
   },
 
@@ -164,24 +153,56 @@ export default {
       (value.substring(0,1) === '-' ? {color: 'red'} : {color: 'gray'})) 
     },
 
+    /* [ ... ] */
+    saveEditData(){
+      if(this.editdate !== undefined){
+        this.array[this.editdate].date = this.formatDate(this.$refs.date[0].value)
+        this.editdate = undefined
+      }
+      if(this.editnumber !== undefined){
+        this.array[this.editnumber].number = this.formatNumber(this.$refs.number[0].value)
+        this.editnumber = undefined
+      }
+    },
+
+    /* [ ... ] */
+    saveAddData(){
+      this.array.push({
+        'date':  this.formatDate(this.adddate),
+        'number': this.formatNumber(this.addnumber),
+      })
+      this.adddate = this.date()
+      this.addnumber = '0'
+      this.add = true
+    },
+
     /* [ РЕДАКТИРОВАТЬ ЯЧЕЙКУ ] */
     editDate(i){
-      this.$emit('edit-date', i)
       this.add = true
       this.editnumber = undefined
       this.editdate = i
+      this.$nextTick(() => {
+        this.$refs['date'][0].focus()
+      })
     },
 
     editNumber(i){
-      this.$emit('delete-item', i)
       this.add = true
       this.editdate = undefined
       this.editnumber = i
+      this.$nextTick(() => {
+        this.$refs['number'][0].focus()
+      })
+    },
+
+    editClose(){
+      this.add = true
+      this.editdate = undefined
+      this.editnumber = undefined
     },
 
     /* [ УДАЛИТЬ ЯЧЕЙКУ ] */
     deleteItem(i){
-      this.$emit('delete-item: ', i)
       this.add = true
       this.editdate = undefined
       this.editnumber = undefined
@@ -190,14 +211,37 @@ export default {
 
     /* [ ДОБАВИТЬ ЯЧЕЙКУ ] */
     addOpen(){
-      this.$emit('add-open')
       this.add = false
       this.editdate = undefined
       this.editnumber = undefined
+      // Сделать number активным
+      this.addEditOpen('number')
     },
 
+    /* [ ... ] */
+    addEditOpen(value){
+      if(value == 'date'){
+        this.addNumberOpen = false
+        this.addDateOpen = true
+      } else {
+        this.addDateOpen = false
+        this.addNumberOpen = true
+      }     
+      this.$nextTick(() => {
+        this.$refs[value].focus()
+      })
+    },
+
+    /* [ ... ] */
+    addEditClose(){
+      this.addDateOpen = false
+      this.addNumberOpen = false
+    },
+
+    /* [ ... ] */
     addClose(){
-      this.$emit('add-close')
+      this.adddate = this.date()
+      this.addnumber = '0'
       this.add = true
     }
   }
@@ -221,10 +265,10 @@ export default {
 
   /* [ ... ] */
   th:nth-child(2){ 
-    width: 100px; 
+    width: 100px;
   }
   th:nth-child(3){ 
-    width: 190px; 
+    width: 190px;
   }
   td:nth-child(3){
     font-style: italic;
